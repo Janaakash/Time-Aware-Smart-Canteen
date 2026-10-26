@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createHybridModel } = require('./modelHelper');
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -8,4 +9,5 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'staff', 'admin'], default: 'student' },
 }, { timestamps: true });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = createHybridModel('User', userSchema, 'users');
+

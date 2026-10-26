@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createHybridModel } = require('./modelHelper');
 
 const foodItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -10,4 +11,5 @@ const foodItemSchema = new mongoose.Schema({
   available: { type: Boolean, default: true },
 }, { timestamps: true });
 
-module.exports = mongoose.model('FoodItem', foodItemSchema);
+module.exports = createHybridModel('FoodItem', foodItemSchema, 'foods');
+

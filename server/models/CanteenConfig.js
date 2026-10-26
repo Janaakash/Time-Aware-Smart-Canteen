@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createHybridModel } = require('./modelHelper');
 
 const canteenConfigSchema = new mongoose.Schema({
   maxOrdersPerPickupWindow: { type: Number, default: 5 },
@@ -13,4 +14,5 @@ const canteenConfigSchema = new mongoose.Schema({
   closingTime: { type: String, default: '20:00' }
 }, { timestamps: true });
 
-module.exports = mongoose.model('CanteenConfig', canteenConfigSchema);
+module.exports = createHybridModel('CanteenConfig', canteenConfigSchema, 'config');
+

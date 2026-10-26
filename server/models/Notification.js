@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createHybridModel } = require('./modelHelper');
 
 const notificationSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -9,4 +10,5 @@ const notificationSchema = new mongoose.Schema({
   read: { type: Boolean, default: false },
 }, { timestamps: true });
 
-module.exports = mongoose.model('Notification', notificationSchema);
+module.exports = createHybridModel('Notification', notificationSchema, 'notifications');
+

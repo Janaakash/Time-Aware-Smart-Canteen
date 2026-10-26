@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createHybridModel } = require('./modelHelper');
 
 const orderItemSchema = new mongoose.Schema({
   foodItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem', required: true },
@@ -10,7 +11,7 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true },
-  billNumber: { type: String, required: true, unique: true }, // Merged bill logic directly into order as requested sometimes, wait, prompt asked for a Bill model too. Let's keep it here and in Bill.
+  billNumber: { type: String, required: true, unique: true },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true },
@@ -28,7 +29,6 @@ const orderSchema = new mongoose.Schema({
   actualPrepStartTime: { type: Date },
   preparedAt: { type: Date },
   collectedAt: { type: Date },
-  // Time-Aware extensions
   pickupWindow: {
     startTime: { type: Date },
     endTime: { type: Date },
@@ -42,4 +42,5 @@ const orderSchema = new mongoose.Schema({
   delayReason: { type: String }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Order', orderSchema);
+module.exports = createHybridModel('Order', orderSchema, 'orders');
+

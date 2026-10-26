@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { createHybridModel } = require('./modelHelper');
 
 const billSchema = new mongoose.Schema({
   billNumber: { type: String, required: true, unique: true },
@@ -9,4 +10,5 @@ const billSchema = new mongoose.Schema({
   generatedAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Bill', billSchema);
+module.exports = createHybridModel('Bill', billSchema, 'bills');
+

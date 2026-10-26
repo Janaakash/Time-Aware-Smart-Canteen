@@ -7,6 +7,12 @@ const connectDB = async () => {
     return;
   }
 
+  // In Vercel serverless, if no cloud MONGO_URI is set, immediately use hybrid data store (no 5s timeout!)
+  if (process.env.VERCEL && (!process.env.MONGO_URI || process.env.MONGO_URI.includes('127.0.0.1') || process.env.MONGO_URI.includes('localhost'))) {
+    console.log('Running on Vercel: using built-in hybrid data store.');
+    return;
+  }
+
   try {
     const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart_canteen';
     const db = await mongoose.connect(mongoUri, {
