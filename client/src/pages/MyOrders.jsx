@@ -23,11 +23,16 @@ const MyOrders = () => {
   useEffect(() => {
     fetchOrders();
 
+    // Poll every 5s for real-time status updates (especially on serverless/Vercel)
+    const interval = setInterval(fetchOrders, 5000);
+
     if (socket) {
       socket.on('orderUpdated', (updatedOrder) => {
         setOrders(prev => prev.map(o => o._id === updatedOrder._id ? updatedOrder : o));
       });
     }
+
+    return () => clearInterval(interval);
   }, [socket]);
 
   if (loading) return <div className="p-6 text-center">Loading Orders...</div>;

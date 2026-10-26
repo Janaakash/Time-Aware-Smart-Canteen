@@ -9,32 +9,63 @@ const Toast = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => {
-    if (socket) {
-      socket.on('notification', (notif) => {
-        setNotifications(prev => [...prev, notif]);
-        
-        // Native browser notification if granted
-        if (Notification.permission === 'granted') {
-          new Notification('Smart Canteen', {
-            body: notif.message,
-            icon: '/vite.svg'
-          });
-        }
+  const shownNotifIds = React.useRef(new Set());
 
-        // Auto remove toast after 10s
-        setTimeout(() => {
-          setNotifications(prev => prev.filter(n => n._id !== notif._id));
-        }, 10000);
+  const handleNewNotification = (notif) => {
+    if (!notif || shownNotifIds.current.has(notif._id)) return;
+    shownNotifIds.current.add(notif._id);
+
+    setNotifications(prev => [...prev, notif]);
+
+    if (Notification.permission === 'granted') {
+      new Notification('Smart Canteen', {
+        body: notif.message,
+        icon: '/favicon.svg'
       });
     }
 
-    // Request browser permission
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n._id !== notif._id));
+    }, 10000);
+  };
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('notification', handleNewNotification);
+    }
+
+    // Polling fallback every 6 seconds for serverless / Vercel
+    let intervalId;
+    if (user && user.role === 'student') {
+      const pollNotifications = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) return;
+          const res = await fetch(`${API_BASE_URL}/api/notifications`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const unread = data.filter(n => !n.read && !shownNotifIds.current.has(n._id));
+            unread.forEach(n => handleNewNotification(n));
+          }
+        } catch (e) {
+          // ignore network errors silently in background poll
+        }
+      };
+
+      pollNotifications();
+      intervalId = setInterval(pollNotifications, 6000);
+    }
+
     if (Notification.permission !== 'denied' && Notification.permission !== 'granted') {
       Notification.requestPermission();
     }
 
-  }, [socket]);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [socket, user]);
 
   if (!notifications.length) return null;
 

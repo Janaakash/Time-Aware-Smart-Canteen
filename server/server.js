@@ -27,6 +27,16 @@ socketHandler.init(server);
 app.use(cors());
 app.use(express.json());
 
+// Ensure Database connection for serverless requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error('DB middleware connection error:', err);
+  }
+  next();
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/foods', foodRoutes);
@@ -39,6 +49,11 @@ app.use('/api/admin', adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (!process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
+
