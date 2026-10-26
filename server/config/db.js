@@ -9,7 +9,9 @@ const connectDB = async () => {
 
   try {
     const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart_canteen';
-    const db = await mongoose.connect(mongoUri);
+    const db = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+    });
     isConnected = db.connections[0].readyState === 1;
     console.log('MongoDB connected successfully');
   } catch (error) {
