@@ -47,6 +47,30 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/time', timeRoutes);
 app.use('/api/admin', adminRoutes);
 
+const path = require('path');
+const fs = require('fs');
+
+// Serve frontend static build in production (e.g. Render fullstack deployment)
+const clientDistPath = path.join(__dirname, '../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // Fallback to index.html for client-side React routing in Express 5
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') {
+      return next();
+    }
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+    const indexPath = path.join(clientDistPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    next();
+  });
+}
+
 const PORT = process.env.PORT || 5000;
 
 if (!process.env.VERCEL) {

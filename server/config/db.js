@@ -7,9 +7,12 @@ const connectDB = async () => {
     return;
   }
 
-  // In Vercel serverless, if no cloud MONGO_URI is set, immediately use hybrid data store (no 5s timeout!)
-  if (process.env.VERCEL && (!process.env.MONGO_URI || process.env.MONGO_URI.includes('127.0.0.1') || process.env.MONGO_URI.includes('localhost'))) {
-    console.log('Running on Vercel: using built-in hybrid data store.');
+  // In cloud deployments (Render, Vercel, or production), if no cloud MONGO_URI is set, immediately use hybrid data store
+  const isCloudDeployment = Boolean(process.env.VERCEL || process.env.RENDER || process.env.NODE_ENV === 'production');
+  const isLocalMongoUri = !process.env.MONGO_URI || process.env.MONGO_URI.includes('127.0.0.1') || process.env.MONGO_URI.includes('localhost');
+
+  if (isCloudDeployment && isLocalMongoUri) {
+    console.log('Running in cloud without external MongoDB: using built-in hybrid data store.');
     return;
   }
 
@@ -22,9 +25,11 @@ const connectDB = async () => {
     console.log('MongoDB connected successfully');
   } catch (error) {
     console.error('MongoDB connection error:', error.message || error);
-    if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
+    if (!isCloudDeployment) {
       // In local development, exit so developer knows MongoDB is not running
       process.exit(1);
+    } else {
+      console.log('Falling back to built-in hybrid data store.');
     }
   }
 };

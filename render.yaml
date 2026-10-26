@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: time-aware-smart-canteen
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
