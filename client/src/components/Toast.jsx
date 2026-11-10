@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 
 const Toast = () => {
   const { socket } = useSocket();

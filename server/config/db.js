@@ -19,18 +19,13 @@ const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smart_canteen';
     const db = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 2000,
     });
     isConnected = db.connections[0].readyState === 1;
     console.log('MongoDB connected successfully');
   } catch (error) {
-    console.error('MongoDB connection error:', error.message || error);
-    if (!isCloudDeployment) {
-      // In local development, exit so developer knows MongoDB is not running
-      process.exit(1);
-    } else {
-      console.log('Falling back to built-in hybrid data store.');
-    }
+    console.warn('⚠️ MongoDB connection could not be established:', error.message || error);
+    console.log('ℹ️ Running with built-in hybrid data store (mockDb) with pre-seeded items and demo accounts.');
   }
 };
 

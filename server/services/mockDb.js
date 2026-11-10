@@ -49,6 +49,40 @@ const initialConfig = {
   closingTime: '20:00'
 };
 
+function populateDoc(doc, pathOrObj) {
+  if (!doc) return doc;
+  const path = typeof pathOrObj === 'string' ? pathOrObj : pathOrObj?.path;
+
+  if (path === 'studentId') {
+    const rawId = doc.studentId?._id || doc.studentId;
+    if (rawId && collections.users) {
+      const foundUser = collections.users.data.find(u => u._id.toString() === rawId.toString());
+      if (foundUser) {
+        doc.studentId = {
+          _id: foundUser._id,
+          name: foundUser.name,
+          email: foundUser.email,
+          studentId: foundUser.studentId,
+          role: foundUser.role
+        };
+      }
+    }
+  } else if (path === 'orderId') {
+    const rawId = doc.orderId?._id || doc.orderId;
+    if (rawId && collections.orders) {
+      const foundOrder = collections.orders.data.find(o => o._id.toString() === rawId.toString());
+      if (foundOrder) {
+        const orderObj = { ...foundOrder };
+        if (pathOrObj?.populate) {
+          populateDoc(orderObj, pathOrObj.populate);
+        }
+        doc.orderId = orderObj;
+      }
+    }
+  }
+  return doc;
+}
+
 class MemoryCollection {
   constructor(initialData = []) {
     this.data = initialData.map(item => this.wrap(item));
@@ -62,6 +96,18 @@ class MemoryCollection {
     if (!doc.createdAt) doc.createdAt = new Date();
     if (!doc.updatedAt) doc.updatedAt = new Date();
 
+    if (Array.isArray(doc.items)) {
+      doc.items = doc.items.map(it => {
+        const itemObj = { ...it };
+        if (!itemObj._id) itemObj._id = generateId();
+        return itemObj;
+      });
+      doc.items.id = function(id) {
+        if (!id) return null;
+        return this.find(x => (x._id || x.id || '').toString() === id.toString()) || null;
+      };
+    }
+
     const collection = this;
     doc.save = async function() {
       doc.updatedAt = new Date();
@@ -74,6 +120,13 @@ class MemoryCollection {
       return doc;
     };
 
+    doc.toObject = function() {
+      const copy = { ...doc };
+      delete copy.save;
+      delete copy.toObject;
+      return copy;
+    };
+
     return doc;
   }
 
@@ -82,18 +135,28 @@ class MemoryCollection {
     for (const key of Object.keys(filter)) {
       const condition = filter[key];
       if (key === '_id' || key === 'studentId' || key === 'orderId') {
-        const itemVal = item[key] ? item[key].toString() : null;
+        const itemVal = item[key] ? (item[key]._id || item[key]).toString() : null;
         if (condition && typeof condition === 'object' && condition.$in) {
-          const list = condition.$in.map(v => v.toString());
+          const list = condition.$in.map(v => (v._id || v).toString());
           if (!list.includes(itemVal)) return false;
+        } else if (condition && typeof condition === 'object' && condition.$ne !== undefined) {
+          if (itemVal === (condition.$ne._id || condition.$ne).toString()) return false;
         } else if (condition) {
-          if (itemVal !== condition.toString()) return false;
+          if (itemVal !== (condition._id || condition).toString()) return false;
         }
-      } else if (key === 'status' && condition && typeof condition === 'object' && condition.$in) {
-        if (!condition.$in.includes(item.status)) return false;
+      } else if (key === 'status') {
+        if (condition && typeof condition === 'object' && condition.$in) {
+          if (!condition.$in.includes(item.status)) return false;
+        } else if (condition && typeof condition === 'object' && condition.$ne !== undefined) {
+          if (item.status === condition.$ne) return false;
+        } else if (condition && item.status !== condition) {
+          return false;
+        }
       } else if (key === 'pickupWindow.slotLabel') {
         const slot = item.pickupWindow && item.pickupWindow.slotLabel;
         if (slot !== condition) return false;
+      } else if (condition && typeof condition === 'object' && condition.$ne !== undefined) {
+        if (item[key] === condition.$ne) return false;
       } else if (condition && typeof condition === 'object' && condition.$exists !== undefined) {
         const exists = item[key] !== undefined && item[key] !== null;
         if (exists !== condition.$exists) return false;
@@ -106,7 +169,7 @@ class MemoryCollection {
 
   find(filter = {}) {
     const matched = this.data.filter(item => this.match(item, filter));
-    let result = [...matched];
+    let result = matched.map(m => this.wrap(m));
 
     // Chainable Mongoose Query Object
     const query = {
@@ -127,7 +190,11 @@ class MemoryCollection {
         result = result.slice(0, n);
         return query;
       },
-      populate() {
+      populate(path, select) {
+        result.forEach(d => populateDoc(d, typeof path === 'object' ? path : { path, select }));
+        return query;
+      },
+      select() {
         return query;
       },
       then(resolve, reject) {
@@ -141,15 +208,37 @@ class MemoryCollection {
     return query;
   }
 
-  async findOne(filter = {}) {
+  findOne(filter = {}) {
     const item = this.data.find(x => this.match(x, filter));
-    return item ? this.wrap(item) : null;
+    const doc = item ? this.wrap(item) : null;
+
+    const query = {
+      populate(path, select) {
+        if (doc) {
+          populateDoc(doc, typeof path === 'object' ? path : { path, select });
+        }
+        return query;
+      },
+      select() {
+        return query;
+      },
+      sort() {
+        return query;
+      },
+      then(resolve, reject) {
+        return Promise.resolve(doc).then(resolve, reject);
+      },
+      catch(reject) {
+        return Promise.resolve(doc).catch(reject);
+      }
+    };
+
+    return query;
   }
 
-  async findById(id) {
-    if (!id) return null;
-    const item = this.data.find(x => x._id.toString() === id.toString());
-    return item ? this.wrap(item) : null;
+  findById(id) {
+    if (!id) return this.findOne({ _id: '__nonexistent__' });
+    return this.findOne({ _id: id });
   }
 
   async findByIdAndUpdate(id, update, options = {}) {

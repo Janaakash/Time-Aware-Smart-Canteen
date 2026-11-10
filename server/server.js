@@ -1,4 +1,11 @@
+const path = require('path');
+const fs = require('fs');
+
+// Load environment variables reliably from multiple possible paths
 require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -47,9 +54,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/time', timeRoutes);
 app.use('/api/admin', adminRoutes);
 
-const path = require('path');
-const fs = require('fs');
-
 // Serve frontend static build in production (e.g. Render fullstack deployment)
 const clientDistPath = path.join(__dirname, '../client/dist');
 if (fs.existsSync(clientDistPath)) {
@@ -61,6 +65,10 @@ if (fs.existsSync(clientDistPath)) {
       return next();
     }
     if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+    // Do not rewrite asset requests with extensions (e.g. .js, .css, .jpg) to HTML
+    if (path.extname(req.path) && req.path !== '/index.html') {
       return next();
     }
     const indexPath = path.join(clientDistPath, 'index.html');

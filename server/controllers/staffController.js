@@ -12,7 +12,7 @@ exports.getOrders = async (req, res) => {
     const now = new Date();
     // Check overdue/at-risk status dynamically
     const processedOrders = orders.map(order => {
-      const orderObj = order.toObject();
+      const orderObj = typeof order.toObject === 'function' ? order.toObject() : { ...order };
       if (order.status !== 'FOOD PREPARED' && order.status !== 'COLLECTED' && order.estimatedReadyAt) {
         if (now > new Date(order.estimatedReadyAt)) {
           orderObj.isAtRisk = true;
@@ -78,7 +78,7 @@ exports.prepareOrderItem = async (req, res) => {
     const order = await Order.findById(id);
     if (!order) return res.status(404).json({ message: 'Order not found.' });
 
-    const item = order.items.id(itemId);
+    const item = order.items.id ? order.items.id(itemId) : order.items.find(i => (i._id || i.id || '').toString() === (itemId || '').toString());
     if (!item) return res.status(404).json({ message: 'Item not found.' });
     
     item.itemStatus = 'READY';
